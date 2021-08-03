@@ -106,8 +106,8 @@ Draw:Sync(function(draw)
     end 
   end
   if wowex.wowexStorage.read('pvpdraw') then
-    for i, object in ipairs(Objects()) do
-      if ObjectType(object) == 4 and UnitCanAttack("player",object) then
+    for object in OM:Objects(OM.Types.Player) do
+      if UnitCanAttack("player",object) then
         local tx, ty, tz = ObjectPosition(object)
         local dist = distancetwo(object) 
         local health = UnitHealth(object)
@@ -163,7 +163,7 @@ Routine:RegisterRoutine(function()
   local GetComboPoints = GetComboPoints("player","target")
   local mana = power(PowerType.Mana, "player")
   local rage = power(PowerType.Rage, "player")
-
+  
   local function GetAggroRange(unit)
     local range = 0
     local playerlvl = UnitLevel("player")
@@ -181,7 +181,6 @@ Routine:RegisterRoutine(function()
   function AoeHasDebuff(spell,range)
     local count = 0
     for object in OM:Objects(OM.Types.Units) do
-      -- if ObjectDistance("player",object) <= Range then
       if UnitAffectingCombat(object) and UnitCanAttack("player",object) and not UnitIsDeadOrGhost(object) and ObjectDistance("player",object) <= range then
         local isTanking, status, threatpct, rawthreatpct, threatvalue = UnitDetailedThreatSituation("player", object)
         if threatvalue and threatvalue > 0 then
@@ -415,7 +414,7 @@ Routine:RegisterRoutine(function()
         local MaulID = resolveSpellID(Maul)
         if castable(Growl) then
           for object in OM:Objects(OM.Types.Units) do
-            if UnitCanAttack("player","target") and UnitCreatureType(object) ~= "Critter" and not UnitIsPlayer(object)  then
+            if UnitCanAttack("player",object) and UnitCreatureType(object) ~= "Critter" and not UnitIsPlayer(object) and not UnitIsDeadOrGhost(object)  then
               local isTanking, status, threatpct, rawthreatpct, threatvalue = UnitDetailedThreatSituation("player", object)
               if threatpct and threatpct <= 60 and distance("player",object) <= 8 then
                 cast(Growl,object)
@@ -457,9 +456,16 @@ Routine:RegisterRoutine(function()
     if castable(OmenOfClarity) and (not buff(OmenOfClarity,"player") or buffduration(OmenOfClarity,"player") <= 120) then
       return cast(OmenOfClarity,"player")
     end
-    if not UnitAffectingCombat("player") and (buff(BearForm,"player") or buff(DireBearForm,"player")) and rage <= 20 and rage >= 5 then
-      if distance("player","target") <= 25 and distance("player","target") > 15 then
-        cast(Enrage,"player")
+    if not UnitAffectingCombat("player") and (buff(BearForm,"player") or buff(DireBearForm,"player")) then 
+      if rage <= 20 and rage >= 5 then
+        if distance("player","target") <= 25 and distance("player","target") > 15 then
+          cast(Enrage,"player")
+          Debug(5229,"Enrage on Pull")
+        end
+      end
+      if rage == 0 and UnitExists("target") and not UnitIsDeadOrGhost("target") and distance("player","target") <= 25 then
+        Eval('RunMacroText("/cast !Dire Bear Form")', 'r')
+        Debug(9634,"Power Shift 0 Rage on Pull")
       end
     end
     if isArena then
@@ -512,8 +518,7 @@ Routine:RegisterRoutine(function()
       if Healing() then return true end
     end
     return false
-  end
-  
+  end  
   if OutOfCombat() then return true end
   if Incombat() then return true end
   
